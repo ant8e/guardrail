@@ -55,5 +55,5 @@ object scalaHttp4s {
   val project = commonModule("scala-http4s")
 
   val sampleV0_22 = buildSampleProject("http4s-v0_22", dependenciesV0_22)
-  val sample = buildSampleProject("http4s", dependencies)
+  val sample = buildSampleProject("http4s", dependencies).settings(crossScalaVersions += "3.1.0")
 }

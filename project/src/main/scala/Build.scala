@@ -1,15 +1,15 @@
 package dev.guardrail.sbt
 
-import sbt._
-import sbt.Keys._
-import scoverage.ScoverageKeys
+import com.typesafe.sbt.SbtGit.*
 import com.typesafe.sbt.SbtGit.GitKeys.gitReader
-import complete.DefaultParsers._
-import com.typesafe.sbt.SbtGit._
-import wartremover.WartRemover.autoImport._
-import scalafix.sbt.ScalafixPlugin.autoImport._
-import xerial.sbt.Sonatype.autoImport._
-import sbtversionpolicy.SbtVersionPolicyPlugin.autoImport._
+import sbt.*
+import complete.DefaultParsers.*
+import sbt.Keys.*
+import sbtversionpolicy.SbtVersionPolicyPlugin.autoImport.*
+import scalafix.sbt.ScalafixPlugin.autoImport.*
+import scoverage.ScoverageKeys
+import wartremover.WartRemover.autoImport.*
+import xerial.sbt.Sonatype.autoImport.*
 
 object Build {
   val stableVersion: SettingKey[String] = SettingKey("stable-version")
@@ -59,24 +59,27 @@ object Build {
 
     scalacOptions ++= Seq(
       "-Xfatal-warnings",
-      "-Ydelambdafy:method",
-      "-Yrangepos",
       // "-Ywarn-unused-import",  // TODO: Enable this! https://github.com/guardrail-dev/guardrail/pull/282
       "-feature",
       "-unchecked",
       "-deprecation",
       "-encoding",
       "utf8"
-    ),
+    ) ++ (if (scalaVersion.value.startsWith("3")) Seq( "-Ykind-projector") else Seq( "-Ydelambdafy:method", "-Yrangepos")),
     Test / scalacOptions -= "-Xfatal-warnings",
     Compile / console / scalacOptions -= "-Xfatal-warnings",
     Compile / consoleQuick / scalacOptions -= "-Xfatal-warnings",
     scalacOptions ++= ifScalaVersion(_ <= 11)(List("-Xexperimental")).value,
     scalacOptions ++= ifScalaVersion(_ == 12)(List("-Ypartial-unification")).value,
     Test / parallelExecution := true,
-    addCompilerPlugin("org.typelevel" % "kind-projector"  % "0.13.2" cross CrossVersion.full),
-    addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),
-    addCompilerPlugin(scalafixSemanticdb),
+    libraryDependencies ++= (
+      if (scalaVersion.value.startsWith("3")) Seq()
+      else {
+        Seq(compilerPlugin("org.typelevel" %% "kind-projector" % "0.13.2" cross CrossVersion.full)
+        , compilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),
+          compilerPlugin(scalafixSemanticdb))
+      }
+      ),
     sonatypeCredentialHost := "s01.oss.sonatype.org",
   )
 
@@ -192,7 +195,7 @@ object Build {
       val isRelease = sys.env.contains("GUARDRAIL_RELEASE_MODULE")
       val isCi = sys.env.contains("GUARDRAIL_CI")
       val isBincompatCi = if (isCi) {
-        import scala.sys.process._
+        import scala.sys.process.*
         "support/current-pr-labels.sh"
           .lineStream_!
           .exists(Set("major", "minor").contains)

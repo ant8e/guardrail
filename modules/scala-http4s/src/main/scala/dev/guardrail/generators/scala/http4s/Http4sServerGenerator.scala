@@ -172,8 +172,8 @@ class Http4sServerGenerator private (version: Http4sVersion)(implicit Cl: Collec
         q"""sealed trait $authErrorTypeName""",
         q"""
           object $errorTermName {
-            final case object Unauthorized extends $errorInit
-            final case object Forbidden extends $errorInit
+            case object Unauthorized extends $errorInit
+            case object Forbidden extends $errorInit
           }
         """
       )
